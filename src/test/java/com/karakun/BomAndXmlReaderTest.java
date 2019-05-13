@@ -20,9 +20,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.karakun.BomAndXmlReader.BROKEN_UTF32BE_BOM;
+import static com.karakun.BomAndXmlReader.BROKEN_UTF32LE_BOM;
 import static com.karakun.BomAndXmlReader.UTF16BE_BOM;
 import static com.karakun.BomAndXmlReader.UTF16LE_BOM;
 import static com.karakun.BomAndXmlReader.UTF32BE_BOM;
@@ -33,6 +36,7 @@ import static com.karakun.BomAndXmlReader.UTF8_BOM;
 
 import static java.nio.charset.Charset.defaultCharset;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -59,12 +63,24 @@ class BomAndXmlReaderTest {
     }
 
     @Test
-    void defaultConstructorUsesLocaleCharset() throws IOException {
+    void singleArgumentConstructorUsesLocaleCharset() throws IOException {
         // when
         final BomAndXmlReader reader = new BomAndXmlReader(EMPTY_STREAM);
 
         // then
         assertReaderHasExpectedEncoding(reader, defaultCharset());
+    }
+
+    @Test
+    void doubleArgumentConstructorUsesPassedCharset() throws IOException {
+        // given
+        final Charset charset = defaultCharset().equals(UTF_8) ? ISO_8859_1 : UTF_8;
+
+        // when
+        final BomAndXmlReader reader = new BomAndXmlReader(EMPTY_STREAM, charset);
+
+        // then
+        assertReaderHasExpectedEncoding(reader, charset);
     }
 
     @Test
@@ -82,6 +98,16 @@ class BomAndXmlReaderTest {
 
         // then
         assertReaderHasExpectedEncoding(reader, charset);
+    }
+
+    @Test
+    void throwsExceptionForUnsupportedEncodings() {
+        assertThrows(UnsupportedCharsetException.class, () ->
+                new BomAndXmlReader(new ByteArrayInputStream(BROKEN_UTF32LE_BOM))
+        );
+        assertThrows(UnsupportedCharsetException.class, () ->
+                new BomAndXmlReader(new ByteArrayInputStream(BROKEN_UTF32BE_BOM))
+        );
     }
 
     @Test
