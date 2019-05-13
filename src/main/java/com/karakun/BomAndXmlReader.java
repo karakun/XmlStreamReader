@@ -22,16 +22,46 @@ import java.nio.charset.Charset;
 import static java.util.Objects.requireNonNull;
 
 /**
- * ...
+ * This Reader will examine the wrapped input stream according to
+ * appendix F of the XML specification in order to guess the encoding
+ * of the XML content in the stream.
+ * <p/>
+ * If the encoding cannot be guessed the reader fall back to the defaultEncoding.
+ * <p/>
+ * The following aspects of the input stream are examined in the order below
+ * <ol>
+ *     <li>Byte order mark (BOM)</li>
+ *     <li>XML encoding declaration</li>
+ *     <li>Default encoding</li>
+ * </ol>
+ * <p/>
+ * For details see:<br/>
+ * <a href="https://www.w3.org/TR/xml/#sec-guessing">XML - Appendix F</a>
  */
 public class BomAndXmlReader extends Reader {
 
     private final InputStreamReader delegate;
 
+    /**
+     * Constructor with OS dependent default encoding.
+     * This constructor is equivalent to calling:<br/>
+     * {@code new BomAndXmlReader(in, Charset.defaultCharset())}
+     *
+     * @param in an input stream with XML content.
+     */
     public BomAndXmlReader(InputStream in) {
         this(in, Charset.defaultCharset());
     }
 
+    /**
+     * Constructor with OS dependent default encoding.
+     * This constructor is equivalent to calling:<br/>
+     * {@code new BomAndXmlReader(in, Charset.defaultCharset())}
+     *
+     * @param in an input stream with XML content.
+     * @param defaultEncoding the encoding to use if no encoding
+     *                        can be derived from the content of the stream
+     */
     public BomAndXmlReader(InputStream in, Charset defaultEncoding) {
         requireNonNull(in);
         requireNonNull(defaultEncoding);
@@ -39,6 +69,23 @@ public class BomAndXmlReader extends Reader {
         delegate = new InputStreamReader(in, defaultEncoding);
     }
 
+    /**
+     * Returns the name of the character encoding being used by this stream.
+     *
+     * <p> If the encoding has an historical name then that name is returned;
+     * otherwise the encoding's canonical name is returned.
+     *
+     * <p> If this instance was created with the {@link
+     * #BomAndXmlReader(InputStream, Charset)} constructor then the returned
+     * name, being unique for the encoding, may differ from the name passed to
+     * the constructor. This method will return <code>null</code> if the
+     * stream has been closed.
+     * </p>
+     * @return The historical name of this encoding, or
+     *         <code>null</code> if the stream has been closed
+     *
+     * @see java.nio.charset.Charset
+     */
     public String getEncoding() {
         return delegate.getEncoding();
     }
