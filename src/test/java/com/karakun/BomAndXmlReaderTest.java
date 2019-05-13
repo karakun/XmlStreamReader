@@ -16,10 +16,23 @@ package com.karakun;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
+
+import static com.karakun.BomAndXmlReader.UTF16BE_BOM;
+import static com.karakun.BomAndXmlReader.UTF16LE_BOM;
+import static com.karakun.BomAndXmlReader.UTF32BE_BOM;
+import static com.karakun.BomAndXmlReader.UTF32BE_NAME;
+import static com.karakun.BomAndXmlReader.UTF32LE_BOM;
+import static com.karakun.BomAndXmlReader.UTF32LE_NAME;
+import static com.karakun.BomAndXmlReader.UTF8_BOM;
 
 import static java.nio.charset.Charset.defaultCharset;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -28,8 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 class BomAndXmlReaderTest {
 
+    private static final String BOM = Character.toString('\uFEFF');
+
     private static final InputStream EMPTY_STREAM = new ByteArrayInputStream(new byte[0]);
-    private static final String DEFAULT_ENCODING = encodingName(defaultCharset());
 
     @Test
     void constructorThrowsOnNullArgument() {
@@ -45,18 +59,43 @@ class BomAndXmlReaderTest {
     }
 
     @Test
-    void defaultConstructorUsesLocaleCharset() {
-        // given
+    void defaultConstructorUsesLocaleCharset() throws IOException {
+        // when
         final BomAndXmlReader reader = new BomAndXmlReader(EMPTY_STREAM);
 
-        // when
-        final String encoding = reader.getEncoding();
-
         // then
-        assertThat(encoding).isEqualTo(DEFAULT_ENCODING);
+        assertReaderHasExpectedEncoding(reader, defaultCharset());
     }
 
-    private static String encodingName(Charset charset) {
-        return charset.name().replaceAll("[^a-zA-Z0-9]", "");
+    @Test
+    void detectEncodingFromBom() throws IOException {
+        detectEncodingFromBom(UTF8_BOM, StandardCharsets.UTF_8);
+        detectEncodingFromBom(UTF16LE_BOM, StandardCharsets.UTF_16LE);
+        detectEncodingFromBom(UTF16BE_BOM, StandardCharsets.UTF_16BE);
+        detectEncodingFromBom(UTF32LE_BOM, Charset.forName(UTF32LE_NAME));
+        detectEncodingFromBom(UTF32BE_BOM, Charset.forName(UTF32BE_NAME));
+    }
+
+    private void detectEncodingFromBom(byte[] bom, Charset charset) throws IOException {
+        // when
+        final BomAndXmlReader reader = new BomAndXmlReader(new ByteArrayInputStream(bom), ISO_8859_1);
+
+        // then
+        assertReaderHasExpectedEncoding(reader, charset);
+    }
+
+    @Test
+    void bomBytesCorrelatesToEncodings() {
+        assertThat(UTF8_BOM).containsExactly(BOM.getBytes(StandardCharsets.UTF_8));
+        assertThat(UTF16LE_BOM).containsExactly(BOM.getBytes(StandardCharsets.UTF_16LE));
+        assertThat(UTF16BE_BOM).containsExactly(BOM.getBytes(StandardCharsets.UTF_16BE));
+        assertThat(UTF32LE_BOM).containsExactly(BOM.getBytes(Charset.forName(UTF32LE_NAME)));
+        assertThat(UTF32BE_BOM).containsExactly(BOM.getBytes(Charset.forName(UTF32BE_NAME)));
+    }
+
+    private void assertReaderHasExpectedEncoding(BomAndXmlReader reader, Charset charset) {
+        final Set<String> aliases = new HashSet<>(charset.aliases());
+        aliases.add(charset.name());
+        assertThat(aliases).contains(reader.getEncoding());
     }
 }
