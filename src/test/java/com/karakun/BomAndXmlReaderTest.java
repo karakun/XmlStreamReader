@@ -137,6 +137,18 @@ class BomAndXmlReaderTest {
         }
     }
 
+    @Test
+    void detectEncodingFromXml() throws IOException {
+        for (CharsetAndBom candidate : CHARSET_AND_BOMS) {
+            // when
+            final BomAndXmlReader reader = new BomAndXmlReader(streamOf(XML_ENCODING_TAG, candidate.charset), ISO_8859_1);
+
+            // then
+            assertReaderHasExpectedEncoding(reader, candidate.charset);
+        }
+    }
+
+
     private void assertReaderHasExpectedEncoding(final BomAndXmlReader reader, final Charset charset) {
         final Set<String> aliases = new HashSet<>(charset.aliases());
         aliases.add(charset.name());

@@ -45,18 +45,55 @@ import static java.util.Optional.empty;
  */
 public class BomAndXmlReader extends Reader {
 
-    // byte order arrays for detecting encodings
+    // '\uFEFF' (byte order marker) byte arrays for detecting encodings
 
     static final byte[] UTF8_BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 
-    static final byte[] UTF16BE_BOM = {(byte) 0xFE, (byte) 0xFF};
     static final byte[] UTF16LE_BOM = {(byte) 0xFF, (byte) 0xFE};
+    static final byte[] UTF16BE_BOM = {(byte) 0xFE, (byte) 0xFF};
 
-    static final byte[] UTF32BE_BOM = {(byte) 0x00, (byte) 0x00, (byte) 0xFE, (byte) 0xFF};
     static final byte[] UTF32LE_BOM = {(byte) 0xFF, (byte) 0xFE, (byte) 0x00, (byte) 0x00};
+    static final byte[] UTF32BE_BOM = {(byte) 0x00, (byte) 0x00, (byte) 0xFE, (byte) 0xFF};
 
-    static final byte[] BROKEN_UTF32BE_BOM = {(byte) 0x00, (byte) 0x00, (byte) 0xFF, (byte) 0xFE};
     static final byte[] BROKEN_UTF32LE_BOM = {(byte) 0xFE, (byte) 0xFF, (byte) 0x00, (byte) 0x00};
+    static final byte[] BROKEN_UTF32BE_BOM = {(byte) 0x00, (byte) 0x00, (byte) 0xFF, (byte) 0xFE};
+
+    // "<?xml" byte arrays for detecting encodings
+
+    private static final byte[] UTF8_FIRST_CHARS = {(byte) 0x3C, (byte) 0x3F, (byte) 0x78, (byte) 0x6D, (byte) 0x6C};
+
+    private static final byte[] UTF16LE_FIRST_CHARS = {
+            (byte) 0x3C, (byte) 0x00, (byte) 0x3F, (byte) 0x00, (byte) 0x78, (byte) 0x00,
+            (byte) 0x6D, (byte) 0x00, (byte) 0x6C, (byte) 0x00};
+    private static final byte[] UTF16BE_FIRST_CHARS = {
+            (byte) 0x00, (byte) 0x3C, (byte) 0x00, (byte) 0x3F, (byte) 0x00, (byte) 0x78,
+            (byte) 0x00, (byte) 0x6D, (byte) 0x00, (byte) 0x6C};
+
+    private static final byte[] UTF32LE_FIRST_CHARS = {
+            (byte) 0x3C, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x3F, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x78, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x6D, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x6C, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+    private static final byte[] UTF32BE_FIRST_CHARS = {
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x3C,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x3F,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x78,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x6D,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x6C};
+
+    private static final byte[] BROKEN_UTF32LE_FIRST_CHARS = {
+            (byte) 0x00, (byte) 0x3C, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x3F, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x78, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x6D, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x6C, (byte) 0x00, (byte) 0x00};
+    private static final byte[] BROKEN_UTF32BE_FIRST_CHARS = {
+            (byte) 0x00, (byte) 0x00, (byte) 0x3C, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x3F, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x78, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x6D, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x6C, (byte) 0x00};
 
     // names of encodings not found in java.nio.StandardCharsets
 
@@ -65,7 +102,7 @@ public class BomAndXmlReader extends Reader {
 
     // constants
 
-    private static final int BUFFER_SIZE = 4;
+    private static final int BUFFER_SIZE = 5 * 4;
 
     // fields
 
@@ -98,13 +135,14 @@ public class BomAndXmlReader extends Reader {
         final PushbackInputStream pin = new PushbackInputStream(in, BUFFER_SIZE);
 
         final Optional<Charset> fromBom = detectFromBom(pin);
+        final Optional<Charset> fromXML = detectFromXml(pin);
 
-        final Charset encoding = fromBom.orElse(defaultEncoding);
+        final Charset encoding = fromBom.orElseGet(() -> fromXML.orElse(defaultEncoding));
 
         delegate = new InputStreamReader(pin, encoding);
     }
 
-    private Optional<Charset> detectFromBom(PushbackInputStream pin) throws IOException {
+    private Optional<Charset> detectFromBom(final PushbackInputStream pin) throws IOException {
 
         final byte[] potentialBom = new byte[4];
         final int read = pin.read(potentialBom);
@@ -115,10 +153,10 @@ public class BomAndXmlReader extends Reader {
         }
 
         if (startsWith(potentialBom, read, BROKEN_UTF32LE_BOM)) {
-            throw new UnsupportedCharsetException("UTF-32LE - unusual ordered");
+            throw new UnsupportedCharsetException("UTF-32LE - unusual ordered BOM");
         }
         if (startsWith(potentialBom, read, BROKEN_UTF32BE_BOM)) {
-            throw new UnsupportedCharsetException("UTF-32BE - unusual ordered");
+            throw new UnsupportedCharsetException("UTF-32BE - unusual ordered BOM");
         }
         if (startsWith(potentialBom, read, UTF32BE_BOM)) {
             return Optional.of(Charset.forName(UTF32BE_NAME));
@@ -140,6 +178,42 @@ public class BomAndXmlReader extends Reader {
         }
 
         pin.unread(potentialBom, 0, read);
+        return empty();
+    }
+
+    private Optional<Charset> detectFromXml(final PushbackInputStream pin) throws IOException {
+        final byte[] firstChars = new byte[20];
+        final int read = pin.read(firstChars);
+
+        if (read < 0) {
+            // nothing read
+            return empty();
+        }
+
+        pin.unread(firstChars, 0, read);
+
+        if (startsWith(firstChars, read, BROKEN_UTF32LE_FIRST_CHARS)) {
+            throw new UnsupportedCharsetException("UTF-32LE - unusual ordered");
+        }
+        if (startsWith(firstChars, read, BROKEN_UTF32BE_FIRST_CHARS)) {
+            throw new UnsupportedCharsetException("UTF-32BE - unusual ordered");
+        }
+        if (startsWith(firstChars, read, UTF32BE_FIRST_CHARS)) {
+            return Optional.of(Charset.forName(UTF32BE_NAME));
+        }
+        if (startsWith(firstChars, read, UTF32LE_FIRST_CHARS)) {
+            return Optional.of(Charset.forName(UTF32LE_NAME));
+        }
+        if (startsWith(firstChars, read, UTF8_FIRST_CHARS)) {
+            return Optional.of(StandardCharsets.UTF_8);
+        }
+        if (startsWith(firstChars, read, UTF16LE_FIRST_CHARS)) {
+            return Optional.of(StandardCharsets.UTF_16LE);
+        }
+        if (startsWith(firstChars, read, UTF16BE_FIRST_CHARS)) {
+            return Optional.of(StandardCharsets.UTF_16BE);
+        }
+
         return empty();
     }
 
@@ -187,7 +261,7 @@ public class BomAndXmlReader extends Reader {
     }
 
     @Override
-    public int read(char[] cbuf, int off, int len) throws IOException {
+    public int read(final char[] cbuf, final int off, final int len) throws IOException {
         return delegate.read(cbuf, off, len);
     }
 
