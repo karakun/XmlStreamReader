@@ -75,24 +75,21 @@ class BomAndXmlReaderTest {
     }
 
     @Test
-    void singleArgumentConstructorUsesLocaleCharset() throws IOException {
+    void singleArgumentConstructorUsesUtf8() throws IOException {
         // when
         final BomAndXmlReader reader = new BomAndXmlReader(EMPTY_STREAM);
 
         // then
-        assertReaderHasExpectedEncoding(reader, defaultCharset());
+        assertReaderHasExpectedEncoding(reader, UTF_8);
     }
 
     @Test
     void doubleArgumentConstructorUsesPassedCharset() throws IOException {
-        // given
-        final Charset charset = defaultCharset().equals(UTF_8) ? ISO_8859_1 : UTF_8;
-
         // when
-        final BomAndXmlReader reader = new BomAndXmlReader(EMPTY_STREAM, charset);
+        final BomAndXmlReader reader = new BomAndXmlReader(EMPTY_STREAM, ISO_8859_1);
 
         // then
-        assertReaderHasExpectedEncoding(reader, charset);
+        assertReaderHasExpectedEncoding(reader, ISO_8859_1);
     }
 
     @Test

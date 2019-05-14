@@ -115,20 +115,18 @@ public class BomAndXmlReader extends Reader {
     private final InputStreamReader delegate;
 
     /**
-     * Constructor with OS dependent default encoding.
+     * Constructor UTF-8 default encoding.
      * This constructor is equivalent to calling:<br/>
-     * {@code new BomAndXmlReader(in, Charset.defaultCharset())}
+     * {@code new BomAndXmlReader(in, StandardCharsets.UTF_8)}
      *
      * @param in an input stream with XML content.
      */
     public BomAndXmlReader(final InputStream in) throws IOException {
-        this(in, Charset.defaultCharset());
+        this(in, StandardCharsets.UTF_8);
     }
 
     /**
-     * Constructor with OS dependent default encoding.
-     * This constructor is equivalent to calling:<br/>
-     * {@code new BomAndXmlReader(in, Charset.defaultCharset())}
+     * Constructor with passed in default encoding.
      *
      * @param in              an input stream with XML content.
      * @param defaultEncoding the encoding to use if no encoding
@@ -249,8 +247,8 @@ public class BomAndXmlReader extends Reader {
     /**
      * Detects if a given byte array starts with a prefix of bytes.
      *
-     * @param bytes the bytes to search for the prefix
-     * @param len the number of bytes in {@code bytes} which are filled
+     * @param bytes  the bytes to search for the prefix
+     * @param len    the number of bytes in {@code bytes} which are filled
      * @param prefix the prefix to search for
      * @return true iff {@code len} is greater or equal to {@code prefix.length}
      * and the {@code prefix} is a prefix of {@code bytes}
@@ -274,7 +272,7 @@ public class BomAndXmlReader extends Reader {
      * The resulting string is searched for an XML encoding tag. If found the corresponding character set is returned.
      * The content in the stream is left unchanged for further processing.
      *
-     * @param pin the input stream
+     * @param pin             the input stream
      * @param guessedEncoding the encoding guessed by analyzing BOM and the first 20 bytes.
      * @return the encoding found in the XML tag or empty
      * @throws IOException if reading from the stream failed
@@ -295,7 +293,7 @@ public class BomAndXmlReader extends Reader {
         if (beginningOfXml.startsWith("<?xml") && endStartTag > 0) {
             final String startTag = beginningOfXml.substring(0, endStartTag + 2);
             final int beginOfEncoding = startTag.indexOf("encoding=\"");
-            if (beginOfEncoding > 0 ) {
+            if (beginOfEncoding > 0) {
                 final int endOfEncoding = startTag.indexOf('"', beginOfEncoding + 10);
                 if (endOfEncoding > 0) {
                     final String encoding = startTag.substring(beginOfEncoding + 10, endOfEncoding);
