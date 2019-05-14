@@ -31,11 +31,12 @@ import static java.util.Optional.empty;
  * appendix F of the XML specification in order to guess the encoding
  * of the XML content in the stream.
  * <p/>
- * If the encoding cannot be guessed the reader fall back to the defaultEncoding.
+ * If the encoding cannot be guessed the reader falls back to the {@code defaultEncoding}.
  * <p/>
  * The following aspects of the input stream are examined in the order below
  * <ol>
  * <li>Byte order mark (BOM)</li>
+ * <li>First 20 byes to see if content starts with "&lt;?xml"</li>
  * <li>XML encoding declaration</li>
  * <li>Default encoding</li>
  * </ol>
@@ -110,8 +111,7 @@ public class BomAndXmlReader extends Reader {
     private static final int MAX_CHARS = 80;
     private static final int BUFFER_SIZE = MAX_CHARS * 4;
 
-    // fields
-
+    // once the encoding has been detected all reading is delegated to this input stream reader.
     private final InputStreamReader delegate;
 
     /**
@@ -146,8 +146,9 @@ public class BomAndXmlReader extends Reader {
         final Charset guessedEncoding = fromBom.orElseGet(() -> fromXML.orElse(defaultEncoding));
 
         final Optional<Charset> fromXmlTag = readOutOfXmlTag(pin, guessedEncoding);
+        final Charset encoding = fromXmlTag.orElse(guessedEncoding);
 
-        delegate = new InputStreamReader(pin, fromXmlTag.orElse(guessedEncoding));
+        delegate = new InputStreamReader(pin, encoding);
     }
 
     /**
@@ -202,7 +203,7 @@ public class BomAndXmlReader extends Reader {
     /**
      * Reads the first 20 bytes of the input stream and detects if the bytes resemble the characters
      * {@code "<?xml"} in a unicode encoding.
-     * If a mark is detected the corresponding {@link Charset} is returned.
+     * If a match is found the corresponding {@link Charset} is returned.
      * The content in the stream is left unchanged for further processing.
      *
      * @param pin the input stream
@@ -271,6 +272,7 @@ public class BomAndXmlReader extends Reader {
      * <p/>
      * Reads the first {@code BUFFER_SIZE} bytes and converts it to a string using the {@code guessedEncoding}.
      * The resulting string is searched for an XML encoding tag. If found the corresponding character set is returned.
+     * The content in the stream is left unchanged for further processing.
      *
      * @param pin the input stream
      * @param guessedEncoding the encoding guessed by analyzing BOM and the first 20 bytes.
