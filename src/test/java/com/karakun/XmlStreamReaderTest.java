@@ -26,15 +26,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.karakun.BomAndXmlReader.BROKEN_UTF32BE_BOM;
-import static com.karakun.BomAndXmlReader.BROKEN_UTF32LE_BOM;
-import static com.karakun.BomAndXmlReader.UTF16BE_BOM;
-import static com.karakun.BomAndXmlReader.UTF16LE_BOM;
-import static com.karakun.BomAndXmlReader.UTF32BE_BOM;
-import static com.karakun.BomAndXmlReader.UTF32BE_NAME;
-import static com.karakun.BomAndXmlReader.UTF32LE_BOM;
-import static com.karakun.BomAndXmlReader.UTF32LE_NAME;
-import static com.karakun.BomAndXmlReader.UTF8_BOM;
+import static com.karakun.XmlStreamReader.BROKEN_UTF32BE_BOM;
+import static com.karakun.XmlStreamReader.BROKEN_UTF32LE_BOM;
+import static com.karakun.XmlStreamReader.UTF16BE_BOM;
+import static com.karakun.XmlStreamReader.UTF16LE_BOM;
+import static com.karakun.XmlStreamReader.UTF32BE_BOM;
+import static com.karakun.XmlStreamReader.UTF32BE_NAME;
+import static com.karakun.XmlStreamReader.UTF32LE_BOM;
+import static com.karakun.XmlStreamReader.UTF32LE_NAME;
+import static com.karakun.XmlStreamReader.UTF8_BOM;
 import static java.nio.charset.Charset.defaultCharset;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -44,9 +44,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Test for {@link BomAndXmlReader}.
+ * Test for {@link XmlStreamReader}.
  */
-class BomAndXmlReaderTest {
+class XmlStreamReaderTest {
 
     private static final String BOM = Character.toString('\uFEFF');
     private static final InputStream EMPTY_STREAM = streamOf(new byte[0]);
@@ -64,20 +64,20 @@ class BomAndXmlReaderTest {
     @Test
     void constructorThrowsOnNullArgument() {
         assertThrows(NullPointerException.class, () ->
-                new BomAndXmlReader(null)
+                new XmlStreamReader(null)
         );
         assertThrows(NullPointerException.class, () ->
-                new BomAndXmlReader(null, defaultCharset())
+                new XmlStreamReader(null, defaultCharset())
         );
         assertThrows(NullPointerException.class, () ->
-                new BomAndXmlReader(EMPTY_STREAM, null)
+                new XmlStreamReader(EMPTY_STREAM, null)
         );
     }
 
     @Test
     void singleArgumentConstructorUsesUtf8() throws IOException {
         // when
-        final BomAndXmlReader reader = new BomAndXmlReader(EMPTY_STREAM);
+        final XmlStreamReader reader = new XmlStreamReader(EMPTY_STREAM);
 
         // then
         assertReaderHasExpectedEncoding(reader, UTF_8);
@@ -86,7 +86,7 @@ class BomAndXmlReaderTest {
     @Test
     void doubleArgumentConstructorUsesPassedCharset() throws IOException {
         // when
-        final BomAndXmlReader reader = new BomAndXmlReader(EMPTY_STREAM, ISO_8859_1);
+        final XmlStreamReader reader = new XmlStreamReader(EMPTY_STREAM, ISO_8859_1);
 
         // then
         assertReaderHasExpectedEncoding(reader, ISO_8859_1);
@@ -96,7 +96,7 @@ class BomAndXmlReaderTest {
     void detectEncodingFromBom() throws IOException {
         for (CharsetAndBom candidate : CHARSET_AND_BOMS) {
             // when
-            final BomAndXmlReader reader = new BomAndXmlReader(streamOf(candidate.bom), ISO_8859_1);
+            final XmlStreamReader reader = new XmlStreamReader(streamOf(candidate.bom), ISO_8859_1);
 
             // then
             assertReaderHasExpectedEncoding(reader, candidate.charset);
@@ -106,10 +106,10 @@ class BomAndXmlReaderTest {
     @Test
     void throwsExceptionForUnsupportedEncodings() {
         assertThrows(UnsupportedCharsetException.class, () ->
-                new BomAndXmlReader(streamOf(BROKEN_UTF32LE_BOM))
+                new XmlStreamReader(streamOf(BROKEN_UTF32LE_BOM))
         );
         assertThrows(UnsupportedCharsetException.class, () ->
-                new BomAndXmlReader(streamOf(BROKEN_UTF32BE_BOM))
+                new XmlStreamReader(streamOf(BROKEN_UTF32BE_BOM))
         );
     }
 
@@ -118,7 +118,7 @@ class BomAndXmlReaderTest {
         for (CharsetAndBom candidate : CHARSET_AND_BOMS) {
             // given
             final String content = "abc";
-            final BomAndXmlReader reader = new BomAndXmlReader(streamOf(candidate.bom, content, candidate.charset));
+            final XmlStreamReader reader = new XmlStreamReader(streamOf(candidate.bom, content, candidate.charset));
 
             // when
             final String line = new BufferedReader(reader).readLine();
@@ -139,7 +139,7 @@ class BomAndXmlReaderTest {
     void detectEncodingFromXml() throws IOException {
         for (CharsetAndBom candidate : CHARSET_AND_BOMS) {
             // when
-            final BomAndXmlReader reader = new BomAndXmlReader(streamOf(XML_ENCODING_TAG, candidate.charset), ISO_8859_1);
+            final XmlStreamReader reader = new XmlStreamReader(streamOf(XML_ENCODING_TAG, candidate.charset), ISO_8859_1);
 
             // then
             assertReaderHasExpectedEncoding(reader, candidate.charset);
@@ -149,14 +149,14 @@ class BomAndXmlReaderTest {
     @Test
     void detectEncodingFromXmlTag() throws IOException {
         // when
-        final BomAndXmlReader reader = new BomAndXmlReader(streamOf(XML_ENCODING_TAG, ISO_8859_15), ISO_8859_1);
+        final XmlStreamReader reader = new XmlStreamReader(streamOf(XML_ENCODING_TAG, ISO_8859_15), ISO_8859_1);
 
         // then
         assertReaderHasExpectedEncoding(reader, ISO_8859_15);
     }
 
 
-    private void assertReaderHasExpectedEncoding(final BomAndXmlReader reader, final Charset charset) {
+    private void assertReaderHasExpectedEncoding(final XmlStreamReader reader, final Charset charset) {
         final Set<String> aliases = new HashSet<>(charset.aliases());
         aliases.add(charset.name());
         assertThat(aliases).contains(reader.getEncoding());
