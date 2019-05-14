@@ -20,11 +20,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.karakun</groupId>
-    <artifactId>bom-and-xml-encoding-reader</artifactId>
+    <artifactId>xml-stream-reader</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>BOM and XML-encoding detecting reader</name>
+    <name>XmlStreamReader</name>
     <description>
         Reader around an InputStream which will try to detect encoding by
         ByteOrderMark (BOM) or `&lt;?xml encoding="xxx" ?&gt;` tag.
