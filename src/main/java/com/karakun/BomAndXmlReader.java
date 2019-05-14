@@ -59,6 +59,11 @@ public class BomAndXmlReader extends Reader {
     static final byte[] BROKEN_UTF32BE_BOM = {(byte) 0x00, (byte) 0x00, (byte) 0xFF, (byte) 0xFE};
 
     // "<?xml" byte arrays for detecting encodings
+    //      < -- 0x3C
+    //      ? -- 0x3F
+    //      x -- 0x78
+    //      m -- 0x6D
+    //      l -- 0x6C
 
     private static final byte[] UTF8_FIRST_CHARS = {(byte) 0x3C, (byte) 0x3F, (byte) 0x78, (byte) 0x6D, (byte) 0x6C};
 
@@ -272,7 +277,7 @@ public class BomAndXmlReader extends Reader {
      * @return the encoding found in the XML tag or empty
      * @throws IOException if reading from the stream failed
      */
-    private Optional<Charset> readOutOfXmlTag(PushbackInputStream pin, Charset guessedEncoding) throws IOException {
+    private Optional<Charset> readOutOfXmlTag(final PushbackInputStream pin, final Charset guessedEncoding) throws IOException {
         final byte[] firstChars = new byte[BUFFER_SIZE];
         final int read = pin.read(firstChars);
 
