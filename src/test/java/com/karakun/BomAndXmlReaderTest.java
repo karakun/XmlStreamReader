@@ -46,8 +46,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class BomAndXmlReaderTest {
 
     private static final String BOM = Character.toString('\uFEFF');
-
-    private static final InputStream EMPTY_STREAM = new ByteArrayInputStream(new byte[0]);
+    private static final InputStream EMPTY_STREAM = streamOf(new byte[0]);
+    private static final String XML_ENCODING_TAG = "<?xml version=\"1.0\" encoding=\"{ENCODING}\" ?>";
 
     @Test
     void constructorThrowsOnNullArgument() {
@@ -94,7 +94,7 @@ class BomAndXmlReaderTest {
 
     private void detectEncodingFromBom(byte[] bom, Charset charset) throws IOException {
         // when
-        final BomAndXmlReader reader = new BomAndXmlReader(new ByteArrayInputStream(bom), ISO_8859_1);
+        final BomAndXmlReader reader = new BomAndXmlReader(streamOf(bom), ISO_8859_1);
 
         // then
         assertReaderHasExpectedEncoding(reader, charset);
@@ -103,10 +103,10 @@ class BomAndXmlReaderTest {
     @Test
     void throwsExceptionForUnsupportedEncodings() {
         assertThrows(UnsupportedCharsetException.class, () ->
-                new BomAndXmlReader(new ByteArrayInputStream(BROKEN_UTF32LE_BOM))
+                new BomAndXmlReader(streamOf(BROKEN_UTF32LE_BOM))
         );
         assertThrows(UnsupportedCharsetException.class, () ->
-                new BomAndXmlReader(new ByteArrayInputStream(BROKEN_UTF32BE_BOM))
+                new BomAndXmlReader(streamOf(BROKEN_UTF32BE_BOM))
         );
     }
 
@@ -123,5 +123,21 @@ class BomAndXmlReaderTest {
         final Set<String> aliases = new HashSet<>(charset.aliases());
         aliases.add(charset.name());
         assertThat(aliases).contains(reader.getEncoding());
+    }
+
+    private static ByteArrayInputStream streamOf(byte[] content) {
+        return new ByteArrayInputStream(content);
+    }
+
+    private static ByteArrayInputStream streamOf(String content, Charset encoding) {
+        return new ByteArrayInputStream(content.replace("{ENCODING}", encoding.name()).getBytes(encoding));
+    }
+
+    private static ByteArrayInputStream streamOf(byte[] bom, String content, Charset encoding) {
+        final byte[] contentBytesOnly = content.replace("{ENCODING}", encoding.name()).getBytes(encoding);
+        final byte[] contentBytes = new byte[bom.length + contentBytesOnly.length];
+        System.arraycopy(bom, 0, contentBytes, 0, bom.length);
+        System.arraycopy(contentBytesOnly, 0, contentBytes, bom.length, contentBytesOnly.length);
+        return new ByteArrayInputStream(contentBytes);
     }
 }
