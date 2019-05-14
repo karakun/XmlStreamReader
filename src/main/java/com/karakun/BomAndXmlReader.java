@@ -102,7 +102,8 @@ public class BomAndXmlReader extends Reader {
 
     // constants
 
-    private static final int BUFFER_SIZE = 5 * 4;
+    private static final int MAX_CHARS = 80;
+    private static final int BUFFER_SIZE = MAX_CHARS * 4;
 
     // fields
 
@@ -137,9 +138,11 @@ public class BomAndXmlReader extends Reader {
         final Optional<Charset> fromBom = detectFromBom(pin);
         final Optional<Charset> fromXML = detectFromXml(pin);
 
-        final Charset encoding = fromBom.orElseGet(() -> fromXML.orElse(defaultEncoding));
+        final Charset guessedEncoding = fromBom.orElseGet(() -> fromXML.orElse(defaultEncoding));
 
-        delegate = new InputStreamReader(pin, encoding);
+        final Optional<Charset> fromXmlTag = readOutOfXmlTag(pin, guessedEncoding);
+
+        delegate = new InputStreamReader(pin, fromXmlTag.orElse(guessedEncoding));
     }
 
     /**
@@ -192,7 +195,7 @@ public class BomAndXmlReader extends Reader {
 
 
     /**
-     * Reads the first 4 bytes of the input stream and detects if the bytes resemble the characters
+     * Reads the first 20 bytes of the input stream and detects if the bytes resemble the characters
      * {@code "<?xml"} in a unicode encoding.
      * If a mark is detected the corresponding {@link Charset} is returned.
      * The content in the stream is left unchanged for further processing.
@@ -256,6 +259,45 @@ public class BomAndXmlReader extends Reader {
             }
         }
         return true;
+    }
+
+    /**
+     * Tries to read the encoding from the encoding tag in an XML (<?xml version="1.0" encoding="UTF-8"?>).
+     * <p/>
+     * Reads the first {@code BUFFER_SIZE} bytes and converts it to a string using the {@code guessedEncoding}.
+     * The resulting string is searched for an XML encoding tag. If found the corresponding character set is returned.
+     *
+     * @param pin the input stream
+     * @param guessedEncoding the encoding guessed by analyzing BOM and the first 20 bytes.
+     * @return the encoding found in the XML tag or empty
+     * @throws IOException if reading from the stream failed
+     */
+    private Optional<Charset> readOutOfXmlTag(PushbackInputStream pin, Charset guessedEncoding) throws IOException {
+        final byte[] firstChars = new byte[BUFFER_SIZE];
+        final int read = pin.read(firstChars);
+
+        if (read < 0) {
+            // nothing read
+            return empty();
+        }
+
+        pin.unread(firstChars, 0, read);
+
+        final String beginningOfXml = new String(firstChars, guessedEncoding);
+        final int endStartTag = beginningOfXml.indexOf("?>");
+        if (beginningOfXml.startsWith("<?xml") && endStartTag > 0) {
+            final String startTag = beginningOfXml.substring(0, endStartTag + 2);
+            final int beginOfEncoding = startTag.indexOf("encoding=\"");
+            if (beginOfEncoding > 0 ) {
+                final int endOfEncoding = startTag.indexOf('"', beginOfEncoding + 10);
+                if (endOfEncoding > 0) {
+                    final String encoding = startTag.substring(beginOfEncoding + 10, endOfEncoding);
+                    return Optional.of(Charset.forName(encoding));
+                }
+            }
+        }
+
+        return empty();
     }
 
     /**

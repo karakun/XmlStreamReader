@@ -51,6 +51,7 @@ class BomAndXmlReaderTest {
     private static final String BOM = Character.toString('\uFEFF');
     private static final InputStream EMPTY_STREAM = streamOf(new byte[0]);
     private static final String XML_ENCODING_TAG = "<?xml version=\"1.0\" encoding=\"{ENCODING}\" ?>";
+    private static final Charset ISO_8859_15 = Charset.forName("ISO-8859-15");
 
     private static final List<CharsetAndBom> CHARSET_AND_BOMS = unmodifiableList(asList(
             new CharsetAndBom(StandardCharsets.UTF_8, UTF8_BOM),
@@ -146,6 +147,15 @@ class BomAndXmlReaderTest {
             // then
             assertReaderHasExpectedEncoding(reader, candidate.charset);
         }
+    }
+
+    @Test
+    void detectEncodingFromXmlTag() throws IOException {
+        // when
+        final BomAndXmlReader reader = new BomAndXmlReader(streamOf(XML_ENCODING_TAG, ISO_8859_15), ISO_8859_1);
+
+        // then
+        assertReaderHasExpectedEncoding(reader, ISO_8859_15);
     }
 
 
