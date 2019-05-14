@@ -142,6 +142,15 @@ public class BomAndXmlReader extends Reader {
         delegate = new InputStreamReader(pin, encoding);
     }
 
+    /**
+     * Reads the first 4 bytes of the input stream and detects any unicode byte order mark (BOM).
+     * If a mark is detected the corresponding {@link Charset} is returned.
+     * Any detected BOM is removed from the stream leaving only the content without the BOM for further processing.
+     *
+     * @param pin the input stream
+     * @return the detected character set or empty if no BOM was found
+     * @throws IOException if a unsupported BOM was detected.
+     */
     private Optional<Charset> detectFromBom(final PushbackInputStream pin) throws IOException {
 
         final byte[] potentialBom = new byte[4];
@@ -181,6 +190,17 @@ public class BomAndXmlReader extends Reader {
         return empty();
     }
 
+
+    /**
+     * Reads the first 4 bytes of the input stream and detects if the bytes resemble the characters
+     * {@code "<?xml"} in a unicode encoding.
+     * If a mark is detected the corresponding {@link Charset} is returned.
+     * The content in the stream is left unchanged for further processing.
+     *
+     * @param pin the input stream
+     * @return the detected character set or empty if no {@code "<?xml"} was found
+     * @throws IOException if a unsupported BOM was detected.
+     */
     private Optional<Charset> detectFromXml(final PushbackInputStream pin) throws IOException {
         final byte[] firstChars = new byte[20];
         final int read = pin.read(firstChars);
@@ -217,6 +237,15 @@ public class BomAndXmlReader extends Reader {
         return empty();
     }
 
+    /**
+     * Detects if a given byte array starts with a prefix of bytes.
+     *
+     * @param bytes the bytes to search for the prefix
+     * @param len the number of bytes in {@code bytes} which are filled
+     * @param prefix the prefix to search for
+     * @return true iff {@code len} is greater or equal to {@code prefix.length}
+     * and the {@code prefix} is a prefix of {@code bytes}
+     */
     private boolean startsWith(final byte[] bytes, final int len, final byte[] prefix) {
         if (len < prefix.length) {
             return false;
