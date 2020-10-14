@@ -30,9 +30,9 @@ import static java.util.Optional.empty;
  * This Reader will examine the wrapped input stream for byte order marker in order to
  * guess the encoding of the content in the stream.
  * <p/>
- * If the encoding cannot be guessed the reader falls back to the {@code defaultEncoding}.
+ * If the encoding cannot be guessed the reader falls back to the {@code fallbackEncoding}.
  * <p/>
- * Subclasses can override the methdo {@link #detectEncoding(PushBackInputStreamWithSize, Optional, Charset)}
+ * Subclasses can override the method {@link #detectEncoding(PushBackInputStreamWithSize, Optional, Charset)}
  * to provide further detection methods besides the byte order marker.
  */
 public class BomStreamReader extends Reader {
@@ -63,34 +63,34 @@ public class BomStreamReader extends Reader {
     private final InputStreamReader delegate;
 
     /**
-     * Constructor with passed in default encoding.
+     * Constructor with passed in fallback encoding.
      *
-     * @param in              an input stream with XML content.
-     * @param defaultEncoding the encoding to use if no encoding
-     *                        can be derived from the content of the stream
+     * @param in               an input stream with XML content.
+     * @param fallbackEncoding the encoding to use if no encoding
+     *                         can be derived from the content of the stream
      * @throws IOException if reading from the stream failed
      */
-    public BomStreamReader(final InputStream in, final Charset defaultEncoding) throws IOException {
-        this(in, defaultEncoding, BUFFER_SIZE);
+    public BomStreamReader(final InputStream in, final Charset fallbackEncoding) throws IOException {
+        this(in, fallbackEncoding, BUFFER_SIZE);
     }
 
     /**
-     * Constructor with passed in default encoding.
+     * Constructor with passed in fallback encoding.
      *
-     * @param in              an input stream with XML content.
-     * @param defaultEncoding the encoding to use if no encoding
-     *                        can be derived from the content of the stream
-     * @param bufferSize      the number of bytes to allocate for the {@link PushBackInputStreamWithSize}
+     * @param in               an input stream with XML content.
+     * @param fallbackEncoding the encoding to use if no encoding
+     *                         can be derived from the content of the stream
+     * @param bufferSize       the number of bytes to allocate for the {@link PushBackInputStreamWithSize}
      * @throws IOException if reading from the stream failed
      */
-    protected BomStreamReader(final InputStream in, final Charset defaultEncoding, int bufferSize) throws IOException {
-        requireNonNull(in, "input stream");
-        requireNonNull(defaultEncoding, "default encoding");
+    protected BomStreamReader(final InputStream in, final Charset fallbackEncoding, int bufferSize) throws IOException {
+        requireNonNull(in, "inputStream");
+        requireNonNull(fallbackEncoding, "fallbackEncoding");
 
         final PushBackInputStreamWithSize pin = new PushBackInputStreamWithSize(in, bufferSize);
 
         final Optional<Charset> fromBom = detectFromBom(pin);
-        final Charset encoding = detectEncoding(pin, fromBom, defaultEncoding);
+        final Charset encoding = detectEncoding(pin, fromBom, fallbackEncoding);
 
         requireNonNull(encoding, "encoding");
 
@@ -103,16 +103,16 @@ public class BomStreamReader extends Reader {
      * This method is meant to be overridden by subclasses in order to
      * provide special logic in determining the encoding.
      *
-     * @param pin             the input stream to read data from without a BOM (if it was present).
-     *                        Be sure to push back any data which should be available to the consumer of the reader
-     * @param fromBom         the encoding guessed by a byte order marker.
-     *                        If this is {@link Optional#empty()} then no valid BOM was found
-     * @param defaultEncoding the default encoding to use in case no encoding could be detected.
+     * @param pin              the input stream to read data from without a BOM (if it was present).
+     *                         Be sure to push back any data which should be available to the consumer of the reader
+     * @param fromBom          the encoding guessed by a byte order marker.
+     *                         If this is {@link Optional#empty()} then no valid BOM was found
+     * @param fallbackEncoding the fallback encoding to use in case no encoding could be detected.
      * @return the final encoding which will be used by the reader. Must not be {@code null}
      * @throws IOException if reading or un-reading from the stream failed
      */
-    protected Charset detectEncoding(final PushBackInputStreamWithSize pin, final Optional<Charset> fromBom, final Charset defaultEncoding) throws IOException {
-        return fromBom.orElse(defaultEncoding);
+    protected Charset detectEncoding(final PushBackInputStreamWithSize pin, final Optional<Charset> fromBom, final Charset fallbackEncoding) throws IOException {
+        return fromBom.orElse(fallbackEncoding);
     }
 
     /**

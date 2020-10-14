@@ -28,14 +28,14 @@ import static java.util.Optional.empty;
  * appendix F of the XML specification in order to guess the encoding
  * of the XML content in the stream.
  * <p/>
- * If the encoding cannot be guessed the reader falls back to the {@code defaultEncoding}.
+ * If the encoding cannot be guessed the reader falls back to the {@code fallbackEncoding}.
  * <p/>
  * The following aspects of the input stream are examined in the order below
  * <ol>
  * <li>Byte order mark (BOM)</li>
  * <li>First 20 byes to see if content starts with "&lt;?xml"</li>
  * <li>XML encoding declaration</li>
- * <li>Default encoding</li>
+ * <li>Fallback encoding</li>
  * </ol>
  * <p/>
  * For details see:<br/>
@@ -91,7 +91,7 @@ public class XmlStreamReader extends BomStreamReader {
     private static final int BUFFER_SIZE = MAX_CHARS * 4;
 
     /**
-     * Constructor UTF-8 default encoding.
+     * Constructor with UTF-8 as the fallback encoding.
      * This constructor is equivalent to calling:<br/>
      * {@code new XmlStreamReader(in, StandardCharsets.UTF_8)}
      *
@@ -103,15 +103,15 @@ public class XmlStreamReader extends BomStreamReader {
     }
 
     /**
-     * Constructor with passed in default encoding.
+     * Constructor with explicit in fallback encoding.
      *
-     * @param in              an input stream with XML content.
-     * @param defaultEncoding the encoding to use if no encoding
-     *                        can be derived from the content of the stream
+     * @param in               an input stream with XML content.
+     * @param fallbackEncoding the encoding to use if no encoding
+     *                         can be derived from the content of the stream
      * @throws IOException if reading from the stream failed
      */
-    public XmlStreamReader(final InputStream in, final Charset defaultEncoding) throws IOException {
-        super(in, defaultEncoding, BUFFER_SIZE);
+    public XmlStreamReader(final InputStream in, final Charset fallbackEncoding) throws IOException {
+        super(in, fallbackEncoding, BUFFER_SIZE);
     }
 
     /**
@@ -120,13 +120,13 @@ public class XmlStreamReader extends BomStreamReader {
      * This implementation will peek into the content of the stream to further detect the encoding.
      */
     @Override
-    protected Charset detectEncoding(final PushBackInputStreamWithSize pin, final Optional<Charset> fromBom, final Charset defaultEncoding) throws IOException {
+    protected Charset detectEncoding(final PushBackInputStreamWithSize pin, final Optional<Charset> fromBom, final Charset fallbackEncoding) throws IOException {
         if (pin.getBufferSize() < BUFFER_SIZE) {
             throw new IllegalStateException("Buffer fits only " + pin.getBufferSize() + " bytes but " + BUFFER_SIZE + " are required");
         }
 
         final Optional<Charset> fromXML = detectFromXml(pin);
-        final Charset guessedEncoding = fromBom.orElseGet(() -> fromXML.orElse(defaultEncoding));
+        final Charset guessedEncoding = fromBom.orElseGet(() -> fromXML.orElse(fallbackEncoding));
 
         final Optional<Charset> fromXmlTag = readOutOfXmlTag(pin, guessedEncoding);
         return fromXmlTag.orElse(guessedEncoding);

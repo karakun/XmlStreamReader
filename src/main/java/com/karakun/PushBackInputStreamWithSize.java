@@ -17,7 +17,7 @@ import java.io.InputStream;
 import java.io.PushbackInputStream;
 
 /**
- * Subclass of {@link PushbackInputStream} which makes number of bytes the internal buffer has available public.
+ * Subclass of {@link PushbackInputStream} which makes number of bytes the internal buffer has available publicly.
  */
 public class PushBackInputStreamWithSize extends PushbackInputStream {
 
